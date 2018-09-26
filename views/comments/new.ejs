@@ -1,0 +1,8 @@
+<% include ../partials/header %>
+
+<form action='/campgrounds/<%=campground._id%>/comments' method='POST'>
+    <input type='text' name='text' placeholder='comment'>
+    <button>Submit</button>
+</form>
+
+<% include ../partials/footer %>
