@@ -1,0 +1,63 @@
+name: Trigger auto deployment for container-app-st4bg627fesgi
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ master ]
+    paths:
+    - '**'
+    - '.github/workflows/container-app-st4bg627fesgi-AutoDeployTrigger-8549c651-c358-49c2-808e-8ef517b270d8.yml'
+
+  # Allow mannually trigger 
+  workflow_dispatch:      
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Log in to container registry
+        uses: docker/login-action@v1
+        with:
+          registry: I+NE0prE14oJhWeKuJYgjBv2cDtU1E/BOEY+IFfm7++ACRB/TCsC
+          username: ${{ secrets.CONTAINERAPPST4BG627FESGI_REGISTRY_USERNAME }}
+          password: ${{ secrets.CONTAINERAPPST4BG627FESGI_REGISTRY_PASSWORD }}
+
+      - name: Build and push container image to registry
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          tags: I+NE0prE14oJhWeKuJYgjBv2cDtU1E/BOEY+IFfm7++ACRB/TCsC/containerregistryst4bg627fesgi:${{ github.sha }}
+          file: ./Dockerfile
+          context: ./
+
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+
+    steps:
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.CONTAINERAPPST4BG627FESGI_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.CONTAINERAPPST4BG627FESGI_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.CONTAINERAPPST4BG627FESGI_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to containerapp
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az config set extension.use_dynamic_install=yes_without_prompt
+            az containerapp registry set -n container-app-st4bg627fesgi -g githubactiontestappcontainerbca8 --server I+NE0prE14oJhWeKuJYgjBv2cDtU1E/BOEY+IFfm7++ACRB/TCsC --username  ${{ secrets.CONTAINERAPPST4BG627FESGI_REGISTRY_USERNAME }} --password ${{ secrets.CONTAINERAPPST4BG627FESGI_REGISTRY_PASSWORD }}
+            az containerapp update -n container-app-st4bg627fesgi -g githubactiontestappcontainerbca8 --image I+NE0prE14oJhWeKuJYgjBv2cDtU1E/BOEY+IFfm7++ACRB/TCsC/containerregistryst4bg627fesgi:${{ github.sha }}
